@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NATION BATTLE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  /* ===== Sweetie16 retro palette ===== */
+  :root{
+    --c0:#1a1c2c; --c1:#29366f; --c2:#3b5dc9; --c3:#41a6f6; --c4:#73eff7;
+    --c5:#f4f4f4; --c6:#94b0c2; --c7:#566c86; --c8:#333c57;
+    --red:#b13e53; --org:#ef7d57; --yel:#ffcd75; --grn:#a7f070; --grn2:#38b764;
+    --pur:#5d275d;
+    --shadow:4px 4px 0 rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"DotGothic16",monospace;
+    color:var(--c5);background:var(--c0);
+    background-image:
+      linear-gradient(rgba(65,166,246,.05) 2px,transparent 2px),
+      linear-gradient(90deg,rgba(65,166,246,.05) 2px,transparent 2px);
+    background-size:32px 32px;
+    min-height:100vh;display:flex;justify-content:center;align-items:flex-start;
+    padding:16px 12px;overflow-x:hidden;-webkit-font-smoothing:none;
+  }
+  img{image-rendering:pixelated;image-rendering:crisp-edges}
+  .app{width:100%;max-width:780px;position:relative}
+
+  h1{
+    font-family:"Press Start 2P",monospace;text-align:center;
+    font-size:clamp(16px,4.4vw,28px);line-height:1.3;margin:6px 0 4px;
+    color:var(--yel);text-shadow:3px 3px 0 var(--red),6px 6px 0 rgba(0,0,0,.4);
+    letter-spacing:1px;
+  }
+  .sub{text-align:center;color:var(--c4);font-size:13px;margin-bottom:14px}
+
+  /* チャンキーなパネル/ボタン共通 */
+  .panel{background:var(--c1);border:3px solid var(--c3);box-shadow:var(--shadow);
+    padding:16px;margin-bottom:14px}
+  .hidden{display:none!important}
+  .ttl{font-size:15px;color:var(--c4);margin-bottom:12px;border-bottom:3px solid var(--c8);padding-bottom:6px}
+
+  .btn{
+    font-family:"DotGothic16",monospace;font-size:15px;cursor:pointer;
+    background:var(--grn2);color:var(--c5);border:3px solid var(--c5);
+    box-shadow:var(--shadow);padding:11px 20px;transition:transform .05s;
+  }
+  .btn:hover:not(:disabled){filter:brightness(1.1)}
+  .btn:active:not(:disabled){transform:translate(4px,4px);box-shadow:0 0 0 rgba(0,0,0,0)}
+  .btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:var(--shadow)}
+  .btn.yel{background:var(--yel);color:var(--c0);border-color:var(--c0)}
+  .btn.red{background:var(--red)}
+  .btn.blue{background:var(--c2)}
+  .btn.sm{font-size:12px;padding:7px 12px;box-shadow:3px 3px 0 rgba(0,0,0,.5)}
+  .btn.sm:active:not(:disabled){transform:translate(3px,3px)}
+
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;
+    background:var(--c8);border:3px solid var(--c3);padding:8px 12px;box-shadow:var(--shadow)}
+  .medal{font-size:15px;color:var(--yel)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:8px 0}
+
+  /* レア星 */
+  .stars{font-size:11px;letter-spacing:1px}
+  .r1{color:var(--c6)} .r2{color:var(--grn)} .r3{color:var(--c4)} .r4{color:var(--org)} .r5{color:var(--yel)}
+
+  /* コレクション/選択グリッド */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+  .ncard{position:relative;background:var(--c8);border:3px solid var(--c7);box-shadow:3px 3px 0 rgba(0,0,0,.5);
+    padding:8px 4px;text-align:center;cursor:pointer;transition:transform .05s}
+  .ncard:hover{filter:brightness(1.12)}
+  .ncard:active{transform:translate(3px,3px)}
+  .ncard.sel{border-color:var(--yel);background:var(--pur)}
+  .ncard.lock{opacity:.28;filter:grayscale(1);cursor:default}
+  .ncard img{width:52px;height:35px;object-fit:cover;border:2px solid var(--c0);display:block;margin:0 auto 4px}
+  .ncard .nm{font-size:12px;font-weight:bold;line-height:1.1}
+  .ncard .pick{position:absolute;top:-8px;left:-8px;width:24px;height:24px;background:var(--yel);color:var(--c0);
+    border:2px solid var(--c0);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold}
+
+  /* ガチャ */
+  .gachaArea{text-align:center;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+  .reveal{display:inline-block;background:var(--c8);border:4px solid var(--yel);box-shadow:var(--shadow);
+    padding:14px 22px;animation:burst .5s ease}
+  @keyframes burst{0%{transform:scale(.3) rotate(-8deg);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+  .reveal img{width:120px;height:80px;object-fit:cover;border:3px solid var(--c0);margin-bottom:8px}
+  .reveal .rn{font-size:18px;font-weight:bold}
+  .flash{animation:flash .5s}
+  @keyframes flash{0%,100%{background:var(--c1)}40%{background:var(--yel)}}
+  /* ガチャ演出 */
+  .gachaStage{position:relative;width:100%;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+  .rays{position:absolute;width:360px;height:360px;border-radius:50%;
+    background:conic-gradient(from 0deg,transparent 0 12deg,rgba(115,239,247,.12) 12deg 24deg);
+    animation:spin 3.5s linear infinite;opacity:0;transition:opacity .4s}
+  .rays.on{opacity:1}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .orb{position:relative;z-index:2;width:96px;height:96px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#fff,var(--c4) 42%,var(--c2) 78%,var(--c1));
+    box-shadow:0 0 0 4px var(--c0),0 0 28px var(--c4);
+    display:flex;align-items:center;justify-content:center;font-size:42px;
+    animation:wob .9s ease-in-out infinite}
+  @keyframes wob{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-9px) rotate(5deg)}}
+  .orb.charge{animation:charge .18s steps(2) infinite}
+  @keyframes charge{0%{transform:translate(-3px,0) rotate(-7deg)}50%{transform:translate(3px,-3px) rotate(7deg)}100%{transform:translate(-2px,2px) rotate(-3deg)}}
+  .aura3{box-shadow:0 0 0 4px var(--c0),0 0 40px var(--c4),0 0 75px var(--c4)!important}
+  .aura4{box-shadow:0 0 0 4px var(--c0),0 0 42px var(--org),0 0 85px var(--org)!important}
+  .aura5{box-shadow:0 0 0 4px var(--c0),0 0 50px var(--yel),0 0 95px var(--yel)!important}
+  .gachaMsg{margin-top:16px;font-size:14px;color:var(--c4);z-index:2;text-align:center}
+  .confetti{position:absolute;top:-10px;font-size:18px;z-index:5;pointer-events:none;animation:conf 1.5s ease-in forwards}
+  @keyframes conf{0%{opacity:0;transform:translateY(-20px) rotate(0)}10%{opacity:1}100%{opacity:0;transform:translateY(240px) rotate(560deg)}}
+  .rainbow{animation:rainbow 1s linear infinite}
+  @keyframes rainbow{to{filter:hue-rotate(360deg)}}
+
+  /* 技編成 */
+  .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+  .tab{background:var(--c8);border:3px solid var(--c7);box-shadow:3px 3px 0 rgba(0,0,0,.5);padding:6px 8px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:12px}
+  .tab img{width:34px;height:22px;object-fit:cover;border:2px solid var(--c0)}
+  .tab.act{border-color:var(--yel);background:var(--pur)}
+  .catgroup{margin-bottom:10px}
+  .catname{font-size:12px;color:var(--c4);margin-bottom:5px}
+  .mvgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px}
+  .mv{background:var(--c8);border:3px solid var(--c7);box-shadow:2px 2px 0 rgba(0,0,0,.5);padding:7px 8px;cursor:pointer;text-align:left;color:var(--c5)}
+  .mv:hover{filter:brightness(1.12)}
+  .mv.on{border-color:var(--grn);background:var(--c1)}
+  .mv.dim{opacity:.35}
+  /* 選択中スロット */
+  .slots{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .slot{flex:1;min-width:130px;background:var(--c0);border:3px solid var(--c7);
+    padding:7px 8px;font-size:12px;display:flex;align-items:center;gap:5px;min-height:40px;box-shadow:2px 2px 0 rgba(0,0,0,.5)}
+  .slot.filled{border-color:var(--grn);cursor:pointer}
+  .slot.filled:hover{border-color:var(--red);filter:brightness(1.1)}
+  .slot .x{margin-left:auto;color:var(--red);font-weight:bold;font-size:14px}
+  .slot.empty{color:var(--c7);justify-content:center}
+  .slots.shake{animation:shake .3s steps(4)}
+  .mv .mn{font-size:13px;font-weight:bold}
+  .mv .mp{font-size:11px;color:var(--c6)}
+  .selcount{font-size:13px;color:var(--yel);margin-bottom:8px}
+
+  /* ===== バトル ===== */
+  .bteam{display:flex;gap:8px;align-items:center;margin:4px 0}
+  .bteam.you{justify-content:flex-end}
+  .pip{width:34px;height:24px;object-fit:cover;border:2px solid var(--c7)}
+  .pip.dead{filter:grayscale(1) brightness(.4)}
+  .pip.now{border-color:var(--yel);box-shadow:0 0 0 2px var(--yel)}
+
+  .stage{position:relative;background:linear-gradient(180deg,var(--c1),var(--c8));
+    border:3px solid var(--c3);box-shadow:var(--shadow);padding:14px;margin:6px 0;overflow:hidden}
+  .arena{display:flex;justify-content:space-between;gap:12px;position:relative;z-index:2}
+  .bfighter{flex:1;background:var(--c0);border:3px solid var(--c7);box-shadow:3px 3px 0 rgba(0,0,0,.5);padding:10px}
+  .bfighter .bf-top{display:flex;align-items:center;gap:8px}
+  .bfighter img.bigflag{width:74px;height:50px;object-fit:cover;border:3px solid var(--c5)}
+  .bfighter .who{font-size:10px;color:var(--c6)}
+  .bfighter .nm{font-size:16px;font-weight:bold}
+  .hprow{display:flex;justify-content:space-between;font-size:11px;color:var(--c6);margin:8px 0 3px}
+  .hpbar{height:14px;background:#000;border:2px solid var(--c7)}
+  .hpfill{height:100%;background:var(--grn);transition:width .5s steps(12)}
+  .hpfill.mid{background:var(--yel)} .hpfill.low{background:var(--red)}
+  .vs{display:flex;align-items:center;font-family:"Press Start 2P";font-size:13px;color:var(--yel)}
+
+  .shake{animation:shake .35s steps(4)}
+  @keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(-7px,2px)}50%{transform:translate(6px,-2px)}75%{transform:translate(-4px,1px)}}
+  .hitflash{animation:hf .3s steps(2)}
+  @keyframes hf{50%{filter:brightness(2.4)}}
+  .lunge.you{animation:lungeU .25s}
+  .lunge.enemy{animation:lungeE .25s}
+  @keyframes lungeU{50%{transform:translate(-8px,-8px)}}
+  @keyframes lungeE{50%{transform:translate(8px,8px)}}
+
+  .dmgpop{position:absolute;top:24%;left:50%;transform:translateX(-50%);font-family:"Press Start 2P";
+    font-size:22px;color:var(--c5);text-shadow:2px 2px 0 var(--red);pointer-events:none;animation:dpop .9s steps(9) forwards;z-index:9}
+  .dmgpop.crit{color:var(--yel);font-size:30px;text-shadow:2px 2px 0 var(--red)}
+  @keyframes dpop{0%{opacity:0;transform:translate(-50%,8px)}25%{opacity:1}100%{opacity:0;transform:translate(-50%,-40px)}}
+
+  .particle{position:absolute;font-size:22px;pointer-events:none;z-index:8;
+    animation:fly .9s ease-out forwards}
+  @keyframes fly{0%{opacity:0;transform:translate(0,0) scale(.4)}
+    20%{opacity:1}
+    100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.2) rotate(var(--rot))}}
+
+  .turninfo{text-align:center;font-size:14px;color:var(--yel);min-height:20px;margin:8px 0}
+  .moves{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .bmv{background:var(--c8);border:3px solid var(--c7);box-shadow:3px 3px 0 rgba(0,0,0,.5);
+    padding:9px;cursor:pointer;text-align:left;color:var(--c5)}
+  .bmv:hover:not(:disabled){filter:brightness(1.15)}
+  .bmv:active:not(:disabled){transform:translate(3px,3px);box-shadow:0 0 0}
+  .bmv:disabled{opacity:.4;cursor:not-allowed}
+  .bmv .bn{font-size:14px;font-weight:bold;display:flex;justify-content:space-between;align-items:center}
+  .tagb{font-size:10px;padding:1px 6px;border:2px solid}
+  .tagb.good{color:var(--grn);border-color:var(--grn)} .tagb.bad{color:var(--red);border-color:var(--red)}
+  .tagb.mid{color:var(--yel);border-color:var(--yel)}
+  .bmv .bp{font-size:10px;color:var(--c6);margin-top:2px}
+  .switchrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+  .switchrow .lbl{font-size:11px;color:var(--c6)}
+  .swbtn{background:var(--c1);border:2px solid var(--c7);padding:3px;cursor:pointer}
+  .swbtn:hover:not(:disabled){border-color:var(--yel)}
+  .swbtn:disabled{opacity:.3;cursor:not-allowed}
+  .swbtn img{width:36px;height:24px;object-fit:cover;display:block}
+
+  .log{background:#000;border:3px solid var(--c7);padding:9px;height:110px;overflow-y:auto;font-size:12px;line-height:1.55;margin-top:10px}
+  .log div{margin-bottom:2px}
+  .log .dmg{color:var(--org)} .log .sys{color:var(--c4)} .log .good{color:var(--grn)} .log .bad{color:var(--red)}
+
+  .result{text-align:center}
+  .result .em{font-size:54px;line-height:1.2}
+  .result h2{font-family:"Press Start 2P";font-size:26px;margin:8px 0}
+  .win{color:var(--grn)} .lose{color:var(--red)}
+  .footer{text-align:center;color:var(--c7);font-size:10px;margin-top:8px;line-height:1.5}
+  .diffrow{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .diffbtn{flex:1;min-width:78px;background:var(--c8);border:3px solid var(--c7);box-shadow:2px 2px 0 rgba(0,0,0,.5);
+    padding:8px 4px;cursor:pointer;text-align:center;font-size:14px;color:var(--c5)}
+  .diffbtn:hover{filter:brightness(1.15)}
+  .diffbtn small{display:block;font-size:9px;color:var(--c6);margin-top:3px;line-height:1.3}
+  .diffbtn.act{border-color:var(--yel);background:var(--pur)}
+  .diffbtn.act.grn{border-color:var(--grn)} .diffbtn.act.org{border-color:var(--org)} .diffbtn.act.red{border-color:var(--red)} .diffbtn.act.c4{border-color:var(--c4)}
+  .rules{margin-top:12px;background:var(--c8);border:3px solid var(--c7);box-shadow:3px 3px 0 rgba(0,0,0,.5)}
+  .rules summary{cursor:pointer;padding:8px 12px;font-size:13px;color:var(--c4);user-select:none}
+  .rules summary:hover{color:var(--yel)}
+  .rules .rulebody{padding:4px 14px 12px;font-size:12px;line-height:1.7;color:var(--c5)}
+  .rules .rulebody p{margin:8px 0}
+  .rules .rulebody b{color:var(--yel)}
+  .log::-webkit-scrollbar{width:8px}.log::-webkit-scrollbar-thumb{background:var(--c7)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>NATION BATTLE</h1>
+  <div class="sub">国 vs 国 ― ドット絵 国家対戦</div>
+
+  <!-- ===== HOME ===== -->
+  <div id="homeScreen" class="panel">
+    <div class="topbar">
+      <span class="medal">🏅 メダル: <b id="medalHome">0</b></span>
+      <span style="font-size:12px;color:var(--c6)">所持国: <b id="ownCount">0</b> / 28</span>
+    </div>
+    <div class="ttl" style="margin-bottom:8px">🎯 難易度</div>
+    <div class="diffrow" id="diffRow"></div>
+    <div class="row">
+      <button class="btn yel" id="toBattle">⚔ バトル</button>
+      <button class="btn blue" id="toGacha">🎁 ガチャ</button>
+    </div>
+    <div class="ttl">📒 コレクション</div>
+    <div id="collGrid" class="grid"></div>
+    <div class="footer">
+      HP＝人口 / 先制＝面積が小さい国 / ダメージ＝国同士の世界ランキングの差<br>
+      強い国（高レア★）ほどガチャで出にくい・3vs3で戦う
+    </div>
+    <details class="rules">
+      <summary>📖 くわしいルール・計算式</summary>
+      <div class="rulebody">
+        <p><b>HP（体力）</b><br>
+          人口が多いほど高い。差が開きすぎないよう <b>√人口</b> でならして <b>80〜200</b> に調整。<br>
+          式： HP ＝ 80 ＋ ( √人口 − √最小人口 ) ÷ ( √最大人口 − √最小人口 ) × 120<br>
+          → 最少人口の国＝約80 ／ 最多人口の国＝約200</p>
+        <p><b>ダメージ（威力）</b><br>
+          その技における2国の<b>世界ランキングの差</b>で決まる。<br>
+          式： 威力 ＝ 20 ＋ 順位差 × 約1.5 （±3のブレあり・最低5）<br>
+          → 自国の順位が相手より上なら大ダメージ（40差以上で「効果は抜群だ！」）</p>
+        <p><b>先制</b>：場の国の<b>面積が小さい方</b>が、毎ターン先に動く。</p>
+        <p><b>ガチャ</b>：レアほど低確率（★1=40 ★2=26 ★3=14 ★4=5 ★5=1.6 の重み）。ダブりはメダル+50。</p>
+      </div>
+    </details>
+    <div class="row" style="margin-top:10px">
+      <button class="btn sm red" id="resetBtn">データ初期化</button>
+    </div>
+  </div>
+
+  <!-- ===== GACHA ===== -->
+  <div id="gachaScreen" class="panel hidden">
+    <div class="topbar">
+      <span class="medal">🏅 メダル: <b id="medalGacha">0</b></span>
+      <button class="btn sm" id="gachaBack">← 戻る</button>
+    </div>
+    <div class="ttl">🎁 ワールドガチャ（1回 100メダル）</div>
+    <div class="gachaArea" id="gachaArea">
+      <div style="color:var(--c6)">ボタンを押して国を引こう！<br>強い国（★が多い）ほどレア！</div>
+    </div>
+    <div class="row">
+      <button class="btn yel" id="pullBtn">🎲 1回引く (100)</button>
+    </div>
+  </div>
+
+  <!-- ===== TEAM SELECT ===== -->
+  <div id="teamScreen" class="panel hidden">
+    <div class="topbar">
+      <span style="font-size:13px">⚔ 出撃する3国を選ぶ</span>
+      <button class="btn sm" id="teamBack">← 戻る</button>
+    </div>
+    <div class="selcount" id="teamCount">選択 0 / 3</div>
+    <div id="teamGrid" class="grid"></div>
+    <div class="row">
+      <button class="btn yel" id="toMoves" disabled>技の編成へ →</button>
+    </div>
+  </div>
+
+  <!-- ===== MOVE SELECT ===== -->
+  <div id="moveScreen" class="panel hidden">
+    <div class="topbar">
+      <span style="font-size:13px">🧩 各国の技を4つ選ぶ</span>
+      <button class="btn sm" id="moveBack">← 戻る</button>
+    </div>
+    <div class="tabs" id="moveTabs"></div>
+    <div class="selcount" id="moveCount"></div>
+    <div id="moveList"></div>
+    <div class="row">
+      <button class="btn yel" id="startBattleBtn">バトル開始 →</button>
+    </div>
+  </div>
+
+  <!-- ===== BATTLE ===== -->
+  <div id="battleScreen" class="panel hidden">
+    <div class="bteam enemy" id="eTeamPips"></div>
+    <div class="stage">
+      <div class="arena">
+        <div class="bfighter enemy" id="enemyBox">
+          <div class="bf-top"><img class="bigflag" id="eFlag" alt="">
+            <div><div class="who">ENEMY</div><div class="nm" id="eName"></div></div></div>
+          <div class="hprow"><span>HP</span><b id="eHpTxt"></b></div>
+          <div class="hpbar"><div class="hpfill" id="eHp"></div></div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="bfighter you" id="playerBox">
+          <div class="bf-top"><img class="bigflag" id="pFlag" alt="">
+            <div><div class="who">YOU</div><div class="nm" id="pName"></div></div></div>
+          <div class="hprow"><span>HP</span><b id="pHpTxt"></b></div>
+          <div class="hpbar"><div class="hpfill" id="pHp"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="bteam you" id="pTeamPips"></div>
+    <div class="turninfo" id="turnInfo"></div>
+    <div class="moves" id="moves"></div>
+    <div class="switchrow" id="switchRow"></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <!-- ===== RESULT ===== -->
+  <div id="resultScreen" class="panel result hidden">
+    <div class="em" id="resEm"></div>
+    <h2 id="resTtl"></h2>
+    <div id="resTxt" style="color:var(--c6);margin-bottom:14px"></div>
+    <button class="btn yel" id="resBack">ホームへ戻る</button>
+  </div>
+</div>
+
+<script>
+/* ========= DATA ========= */
+const NATIONS=[
+ {id:'jp',cc:'jp',name:'日本',rar:4,    gdp:4.2,trade:1.7,finance:45, pop:124, society:920,env:75,sports:58,area:378},
+ {id:'us',cc:'us',name:'アメリカ',rar:5, gdp:27, trade:5.4,finance:177,pop:335, society:921,env:51,sports:113,area:9834},
+ {id:'cn',cc:'cn',name:'中国',rar:5,    gdp:18, trade:6.0,finance:217,pop:1410,society:788,env:28,sports:88,area:9597},
+ {id:'de',cc:'de',name:'ドイツ',rar:4,  gdp:4.5,trade:3.3,finance:236,pop:84,  society:950,env:75,sports:49,area:357},
+ {id:'in',cc:'in',name:'インド',rar:4,  gdp:3.7,trade:1.6,finance:218,pop:1430,society:644,env:18,sports:7, area:3287},
+ {id:'br',cc:'br',name:'ブラジル',rar:3,gdp:2.2,trade:0.6,finance:216,pop:216, society:760,env:50,sports:20,area:8516},
+ {id:'gb',cc:'gb',name:'イギリス',rar:4,gdp:3.3,trade:1.4,finance:200,pop:68,  society:940,env:78,sports:65,area:244},
+ {id:'fr',cc:'fr',name:'フランス',rar:4,gdp:3.0,trade:1.4,finance:190,pop:68,  society:910,env:80,sports:64,area:552},
+ {id:'ru',cc:'ru',name:'ロシア',rar:3,  gdp:2.0,trade:0.8,finance:280,pop:144, society:822,env:38,sports:71,area:17098},
+ {id:'kr',cc:'kr',name:'韓国',rar:3,    gdp:1.7,trade:1.4,finance:250,pop:52,  society:925,env:46,sports:32,area:100},
+ {id:'ca',cc:'ca',name:'カナダ',rar:3,  gdp:2.1,trade:1.0,finance:194,pop:40,  society:935,env:50,sports:27,area:9985},
+ {id:'au',cc:'au',name:'オーストラリア',rar:3,gdp:1.7,trade:0.7,finance:250,pop:26,society:946,env:60,sports:53,area:7692},
+ {id:'it',cc:'it',name:'イタリア',rar:3,gdp:2.3,trade:1.2,finance:160,pop:59,  society:906,env:68,sports:40,area:301},
+ {id:'es',cc:'es',name:'スペイン',rar:3,gdp:1.6,trade:0.9,finance:180,pop:48,  society:911,env:70,sports:45,area:506},
+ {id:'mx',cc:'mx',name:'メキシコ',rar:2,gdp:1.8,trade:1.0,finance:210,pop:128, society:758,env:55,sports:12,area:1964},
+ {id:'id',cc:'id',name:'インドネシア',rar:2,gdp:1.4,trade:0.5,finance:240,pop:277,society:705,env:45,sports:8,area:1905},
+ {id:'tr',cc:'tr',name:'トルコ',rar:2,  gdp:1.1,trade:0.5,finance:260,pop:85,  society:838,env:42,sports:18,area:784},
+ {id:'sa',cc:'sa',name:'サウジアラビア',rar:3,gdp:1.1,trade:0.6,finance:270,pop:36,society:875,env:35,sports:5,area:2150},
+ {id:'nl',cc:'nl',name:'オランダ',rar:3,gdp:1.1,trade:1.5,finance:210,pop:18,  society:946,env:72,sports:28,area:42},
+ {id:'ch',cc:'ch',name:'スイス',rar:3,  gdp:0.9,trade:0.7,finance:260,pop:9,   society:967,env:79,sports:7, area:41},
+ {id:'se',cc:'se',name:'スウェーデン',rar:2,gdp:0.6,trade:0.6,finance:255,pop:10,society:952,env:78,sports:15,area:450},
+ {id:'ar',cc:'ar',name:'アルゼンチン',rar:1,gdp:0.6,trade:0.2,finance:150,pop:46,society:849,env:52,sports:21,area:2780},
+ {id:'za',cc:'za',name:'南アフリカ',rar:1,gdp:0.4,trade:0.2,finance:200,pop:60, society:717,env:40,sports:16,area:1221},
+ {id:'eg',cc:'eg',name:'エジプト',rar:1,gdp:0.4,trade:0.2,finance:210,pop:112, society:731,env:43,sports:7, area:1001},
+ {id:'ng',cc:'ng',name:'ナイジェリア',rar:1,gdp:0.5,trade:0.1,finance:230,pop:223,society:548,env:35,sports:3,area:924},
+ {id:'th',cc:'th',name:'タイ',rar:1,    gdp:0.5,trade:0.5,finance:235,pop:72,  society:803,env:44,sports:10,area:513},
+ {id:'vn',cc:'vn',name:'ベトナム',rar:1,gdp:0.4,trade:0.7,finance:245,pop:98,  society:726,env:40,sports:6, area:331},
+ {id:'nz',cc:'nz',name:'ニュージーランド',rar:1,gdp:0.25,trade:0.15,finance:250,pop:5,society:939,env:72,sports:9,area:268},
+];
+const BY={}; NATIONS.forEach(n=>BY[n.id]=n);
+const flag=cc=>`https://flagcdn.com/w160/${cc}.png`;
+
+const CATS=[
+ {key:'gdp',label:'経済',emo:'🪙'},
+ {key:'trade',label:'貿易',emo:'🚢'},
+ {key:'finance',label:'財政',emo:'💴'},
+ {key:'pop',label:'人口',emo:'🧑'},
+ {key:'society',label:'社会',emo:'🏙️'},
+ {key:'env',label:'環境',emo:'🍃'},
+ {key:'sports',label:'スポーツ',emo:'🏅'},
+];
+const CATMAP={}; CATS.forEach(c=>CATMAP[c.key]=c);
+
+/* 技（カテゴリ細分化） name,cat,power */
+/* 各技は固有の指標(w)を持つ。値は基礎ステータスの加重和で、技ごとに順位が変わる。
+   指標キー: gdp 貿易trade 財政fin 人口pop 社会soc 環境env 競技sports 面積area
+            gdppc=1人あたりGDP tradepc=1人あたり貿易 lowsoc=若さ(社会の逆) */
+const MOVES=[
+ {n:'GDP砲',cat:'gdp',desc:'国内総生産',w:{gdp:1}},
+ {n:'GNI斬り',cat:'gdp',desc:'1人あたり所得',w:{gdppc:1}},
+ {n:'株価ショック',cat:'gdp',desc:'株式市場',w:{gdp:0.6,fin:0.4}},
+ {n:'通貨防衛',cat:'gdp',desc:'通貨・外貨',w:{fin:0.7,gdp:0.3}},
+
+ {n:'輸出ラッシュ',cat:'trade',desc:'輸出力',w:{trade:0.6,gdp:0.4}},
+ {n:'輸入攻勢',cat:'trade',desc:'輸入需要',w:{trade:0.5,pop:0.5}},
+ {n:'関税爆弾',cat:'trade',desc:'貿易総額',w:{trade:1}},
+ {n:'海運封鎖',cat:'trade',desc:'貿易依存度',w:{tradepc:1}},
+
+ {n:'国債発行',cat:'finance',desc:'起債力',w:{gdp:0.5,fin:0.5}},
+ {n:'増税スラッシュ',cat:'finance',desc:'税収基盤',w:{fin:0.5,soc:0.5}},
+ {n:'外貨準備',cat:'finance',desc:'外貨準備高',w:{fin:0.6,trade:0.4}},
+ {n:'緊縮財政',cat:'finance',desc:'財政健全度',w:{fin:1}},
+
+ {n:'人海戦術',cat:'pop',desc:'総人口',w:{pop:1}},
+ {n:'労働力動員',cat:'pop',desc:'労働力',w:{pop:0.7,soc:0.3}},
+ {n:'都市化の波',cat:'pop',desc:'都市化',w:{pop:0.4,gdppc:0.6}},
+ {n:'若年パワー',cat:'pop',desc:'若さ',w:{pop:0.6,lowsoc:0.4}},
+
+ {n:'教育立国',cat:'society',desc:'教育水準',w:{soc:0.6,gdppc:0.4}},
+ {n:'医療充実',cat:'society',desc:'医療規模',w:{soc:0.6,gdp:0.4}},
+ {n:'治安出動',cat:'society',desc:'治安・動員',w:{soc:0.5,pop:0.5}},
+ {n:'幸福オーラ',cat:'society',desc:'幸福度',w:{soc:0.7,env:0.3}},
+
+ {n:'再エネ砲',cat:'env',desc:'再生エネ',w:{env:0.7,gdppc:0.3}},
+ {n:'森林の守り',cat:'env',desc:'森林面積',w:{env:0.6,area:0.4}},
+ {n:'CO2削減波',cat:'env',desc:'脱炭素',w:{env:0.8,soc:0.2}},
+ {n:'水の恵み',cat:'env',desc:'水資源',w:{env:0.5,area:0.5}},
+
+ {n:'サッカー魂',cat:'sports',desc:'サッカー',w:{sports:0.6,pop:0.4}},
+ {n:'野球の一撃',cat:'sports',desc:'野球',w:{sports:0.6,gdppc:0.4}},
+ {n:'五輪ラッシュ',cat:'sports',desc:'五輪総合',w:{sports:1}},
+ {n:'バスケダンク',cat:'sports',desc:'バスケ',w:{sports:0.7,gdp:0.3}},
+];
+const MV={}; MOVES.forEach(m=>MV[m.n]=m);
+
+const N=NATIONS.length;
+/* カテゴリ順位（カテゴリ見出し用に残す） */
+const ranks={}, score={};
+CATS.forEach(c=>{
+ const s=[...NATIONS].sort((a,b)=>b[c.key]-a[c.key]);
+ ranks[c.key]={}; score[c.key]={};
+ s.forEach((n,i)=>{ranks[c.key][n.id]=i+1; score[c.key][n.id]=Math.round((N-1-i)/(N-1)*100);});
+});
+
+/* 基礎ステータスを0..1に正規化（派生指標も含む） */
+const STATSRC={gdp:n=>n.gdp,trade:n=>n.trade,fin:n=>n.finance,pop:n=>n.pop,
+  soc:n=>n.society,env:n=>n.env,sports:n=>n.sports,area:n=>n.area,
+  gdppc:n=>n.gdp/n.pop,tradepc:n=>n.trade/n.pop};
+const NORM={};
+for(const k in STATSRC){
+ const vals=NATIONS.map(STATSRC[k]); const mn=Math.min(...vals),mx=Math.max(...vals);
+ NORM[k]={}; NATIONS.forEach(n=>NORM[k][n.id]=(STATSRC[k](n)-mn)/((mx-mn)||1));
+}
+NORM.lowsoc={}; NATIONS.forEach(n=>NORM.lowsoc[n.id]=1-NORM.soc[n.id]);
+
+/* 技ごとの順位(mrank)とスコア(mscore 0..100) を算出 */
+const mval={}, mrank={}, mscore={};
+MOVES.forEach(m=>{
+ mval[m.n]={};
+ NATIONS.forEach(n=>{ let v=0; for(const k in m.w) v+=m.w[k]*(NORM[k][n.id]||0); mval[m.n][n.id]=v; });
+ const s=[...NATIONS].sort((a,b)=>mval[m.n][b.id]-mval[m.n][a.id]);
+ mrank[m.n]={}; mscore[m.n]={};
+ s.forEach((n,i)=>{mrank[m.n][n.id]=i+1; mscore[m.n][n.id]=Math.round((N-1-i)/(N-1)*100);});
+});
+const sq=NATIONS.map(n=>Math.sqrt(n.pop)), minSq=Math.min(...sq), maxSq=Math.max(...sq);
+const maxHpOf=n=>Math.round(80+(Math.sqrt(n.pop)-minSq)/(maxSq-minSq)*120);
+const starStr=r=>'★'.repeat(r)+'☆'.repeat(5-r);
+
+/* ========= 難易度 =========
+   rarPool=敵に出る国のレア帯 / eHp=敵HP倍率 / eDmg=敵の与ダメ倍率 / ai=賢さ / reward=勝利報酬 */
+const DIFFS={
+ easy:  {key:'easy',  name:'かんたん', rarPool:[1,2,3], eHp:0.85, eDmg:0.8,  ai:'rand',  reward:80,  cls:'grn', sub:'弱い国・報酬80'},
+ normal:{key:'normal',name:'ふつう',   rarPool:null,    eHp:1.0,  eDmg:1.0,  ai:'smart', reward:150, cls:'c4',  sub:'全部ランダム・報酬150'},
+ hard:  {key:'hard',  name:'むずかしい',rarPool:[3,4,5], eHp:1.1,  eDmg:1.15, ai:'smart', reward:260, cls:'org', sub:'強い国寄り・報酬260'},
+ oni:   {key:'oni',   name:'おに',     rarPool:[4,5],   eHp:1.25, eDmg:1.3,  ai:'smart', reward:450, cls:'red', sub:'最強国・報酬450'},
+};
+const DIFF_ORDER=['easy','normal','hard','oni'];
+const curDiff=()=>DIFFS[SAVE.diff]||DIFFS.normal;
+
+/* ========= SAVE ========= */
+const SAVE={owned:[],medals:500,moves:{},diff:'normal'};
+function load(){
+ try{const d=JSON.parse(localStorage.getItem('nb_save'));
+   if(d&&d.owned){Object.assign(SAVE,d);} }catch(e){}
+ if(!SAVE.owned.length){ // 初回：3国もらえる
+   const set=new Set();
+   while(set.size<3) set.add(rollGacha().id);
+   SAVE.owned=[...set]; SAVE.medals=500;
+ }
+ SAVE.owned.forEach(id=>{ if(!SAVE.moves[id]) SAVE.moves[id]=autoMoves(BY[id]); });
+ save();
+}
+function save(){ try{localStorage.setItem('nb_save',JSON.stringify(SAVE));}catch(e){/* file://等で保存不可でもゲームは継続 */} }
+
+/* ガチャ抽選（レア重み：高レアほど低確率） */
+const RW={1:40,2:26,3:14,4:5,5:1.6};
+function rollGacha(){
+ let tot=0; NATIONS.forEach(n=>tot+=RW[n.rar]);
+ let r=Math.random()*tot;
+ for(const n of NATIONS){ r-=RW[n.rar]; if(r<=0) return n; }
+ return NATIONS[0];
+}
+function autoMoves(nat){
+ // その国が最も上位に来る技を4つ
+ return [...MOVES].sort((a,b)=>mrank[a.n][nat.id]-mrank[b.n][nat.id]).slice(0,4).map(m=>m.n);
+}
+
+/* ========= SCREENS ========= */
+const screens=['homeScreen','gachaScreen','teamScreen','moveScreen','battleScreen','resultScreen'];
+function show(id){screens.forEach(s=>document.getElementById(s).classList.toggle('hidden',s!==id));}
+
+/* ---- HOME ---- */
+function renderHome(){
+ document.getElementById('medalHome').textContent=SAVE.medals;
+ document.getElementById('ownCount').textContent=SAVE.owned.length;
+ const g=document.getElementById('collGrid'); g.innerHTML='';
+ NATIONS.forEach(n=>{
+   const owned=SAVE.owned.includes(n.id);
+   const c=document.createElement('div');
+   c.className='ncard'+(owned?'':' lock');
+   c.innerHTML=`<img src="${flag(n.cc)}" alt="">
+     <div class="nm">${owned?n.name:'？？？'}</div>
+     <div class="stars r${n.rar}">${owned?starStr(n.rar):'★'.repeat(n.rar)}</div>`;
+   g.appendChild(c);
+ });
+ renderDiff();
+ show('homeScreen');
+}
+function renderDiff(){
+ const dr=document.getElementById('diffRow'); dr.innerHTML='';
+ DIFF_ORDER.forEach(k=>{
+   const d=DIFFS[k], act=(SAVE.diff===k);
+   const b=document.createElement('div');
+   b.className='diffbtn'+(act?' act '+d.cls:'');
+   b.innerHTML=`${d.name}<small>${d.sub}</small>`;
+   b.onclick=()=>{ SAVE.diff=k; save(); renderDiff(); updateBattleBtn(); };
+   dr.appendChild(b);
+ });
+ updateBattleBtn();
+}
+function updateBattleBtn(){ document.getElementById('toBattle').textContent='⚔ バトル（'+curDiff().name+'）'; }
+document.getElementById('toGacha').onclick=()=>{renderGacha();show('gachaScreen');};
+document.getElementById('toBattle').onclick=()=>{
+ if(SAVE.owned.length<3){alert('バトルには3国必要！ガチャで増やそう');return;}
+ startTeamSelect();
+};
+document.getElementById('resetBtn').onclick=()=>{
+ if(confirm('コレクションとメダルを初期化します。よい？')){localStorage.removeItem('nb_save');location.reload();}
+};
+
+/* ---- GACHA ---- */
+function renderGacha(){document.getElementById('medalGacha').textContent=SAVE.medals;}
+document.getElementById('gachaBack').onclick=()=>renderHome();
+document.getElementById('pullBtn').onclick=()=>{
+ if(SAVE.medals<100){alert('メダルが足りない！バトルに勝って稼ごう');return;}
+ const btn=document.getElementById('pullBtn'); btn.disabled=true;
+ SAVE.medals-=100; renderGacha();
+ const n=rollGacha();
+ let msg,dupe=SAVE.owned.includes(n.id);
+ if(dupe){SAVE.medals+=50; msg=`<div style="color:var(--c6);margin-top:6px">ダブり… メダル +50</div>`;}
+ else{SAVE.owned.push(n.id); SAVE.moves[n.id]=autoMoves(n); msg=`<div style="color:var(--grn);margin-top:6px">NEW! 仲間が増えた！</div>`;}
+ save();
+ playGacha(n,msg);
+ setTimeout(()=>{btn.disabled=false;},2200);
+};
+function playGacha(n,resultMsg){
+ const area=document.getElementById('gachaArea');
+ area.innerHTML=`<div class="gachaStage">
+   <div class="rays" id="gRays"></div>
+   <div class="orb" id="gOrb">🎁</div>
+   <div class="gachaMsg" id="gMsg">✨ 抽選中... ✨</div></div>`;
+ const orb=document.getElementById('gOrb'), rays=document.getElementById('gRays'), msg=document.getElementById('gMsg');
+ setTimeout(()=>rays.classList.add('on'),100);
+ setTimeout(()=>{orb.classList.add('charge'); msg.textContent='✨✨ どきどき... ✨✨';},700);
+ setTimeout(()=>{ // レア確定演出（色で示唆）
+   if(n.rar>=3) orb.classList.add('aura'+Math.min(n.rar,5));
+   if(n.rar>=5){orb.classList.add('rainbow'); orb.textContent='🌈'; msg.innerHTML='<span style="color:var(--yel)">★★★★★ 超レアの予感…！？</span>';}
+   else if(n.rar>=4){orb.textContent='✨'; msg.innerHTML='<span style="color:var(--org)">きらめきが強い…！</span>';}
+   else if(n.rar>=3){msg.innerHTML='<span style="color:var(--c4)">青く光った…！</span>';}
+ },1300);
+ setTimeout(()=>revealGacha(n,resultMsg),1950);
+}
+function revealGacha(n,resultMsg){
+ const area=document.getElementById('gachaArea');
+ area.classList.remove('flash'); void area.offsetWidth; area.classList.add('flash');
+ area.innerHTML=`<div class="reveal ${n.rar>=5?'rainbow':''}">
+   <img src="${flag(n.cc)}" alt="">
+   <div class="rn">${n.name}</div>
+   <div class="stars r${n.rar}" style="font-size:16px">${starStr(n.rar)}</div>
+   ${resultMsg}</div>`;
+ if(n.rar>=4){
+   const emos=n.rar>=5?['🎉','⭐','🌈','✨','🏆']:['🎉','⭐','✨'];
+   for(let i=0;i<28;i++){
+     const c=document.createElement('div'); c.className='confetti';
+     c.textContent=emos[i%emos.length];
+     c.style.left=Math.random()*100+'%';
+     c.style.animationDelay=(Math.random()*0.55)+'s';
+     area.appendChild(c); setTimeout(()=>c.remove(),2100);
+   }
+ }
+ renderGacha();
+}
+
+/* ---- TEAM SELECT ---- */
+let teamPick=[];
+function startTeamSelect(){
+ teamPick=[]; renderTeam(); show('teamScreen');
+}
+function renderTeam(){
+ const g=document.getElementById('teamGrid'); g.innerHTML='';
+ SAVE.owned.map(id=>BY[id]).forEach(n=>{
+   const idx=teamPick.indexOf(n.id);
+   const c=document.createElement('div');
+   c.className='ncard'+(idx>=0?' sel':'');
+   c.innerHTML=`${idx>=0?`<div class="pick">${idx+1}</div>`:''}
+     <img src="${flag(n.cc)}" alt=""><div class="nm">${n.name}</div>
+     <div class="stars r${n.rar}">${starStr(n.rar)}</div>`;
+   c.onclick=()=>{
+     const i=teamPick.indexOf(n.id);
+     if(i>=0) teamPick.splice(i,1);
+     else if(teamPick.length<3) teamPick.push(n.id);
+     renderTeam();
+   };
+   g.appendChild(c);
+ });
+ document.getElementById('teamCount').textContent=`選択 ${teamPick.length} / 3`;
+ document.getElementById('toMoves').disabled=teamPick.length!==3;
+}
+document.getElementById('teamBack').onclick=()=>renderHome();
+document.getElementById('toMoves').onclick=()=>{moveTab=0;renderMoves();show('moveScreen');};
+
+/* ---- MOVE SELECT ---- */
+let moveTab=0;
+function renderMoves(){
+ const tabs=document.getElementById('moveTabs'); tabs.innerHTML='';
+ teamPick.forEach((id,i)=>{
+   const n=BY[id];
+   const t=document.createElement('div');
+   t.className='tab'+(i===moveTab?' act':'');
+   t.innerHTML=`<img src="${flag(n.cc)}"><span>${n.name}</span>`;
+   t.onclick=()=>{moveTab=i;renderMoves();};
+   tabs.appendChild(t);
+ });
+ const nat=BY[teamPick[moveTab]];
+ // 壊れた/古いセーブ対策：未知の技名を除去（参照を維持したままフィルタ）
+ if(!Array.isArray(SAVE.moves[nat.id])) SAVE.moves[nat.id]=autoMoves(nat);
+ const sel=SAVE.moves[nat.id];
+ for(let i=sel.length-1;i>=0;i--){ if(!MV[sel[i]]) sel.splice(i,1); }
+ document.getElementById('moveCount').textContent=`${nat.name}：技を4つ装備（指標で世界順位が決まる）`;
+ const list=document.getElementById('moveList'); list.innerHTML='';
+
+ // === 選択中スロット（4枠）===
+ const slots=document.createElement('div'); slots.className='slots'; slots.id='slotBar';
+ for(let i=0;i<4;i++){
+   const name=sel[i]; const s=document.createElement('div');
+   if(name){ const mo=MV[name];
+     s.className='slot filled';
+     s.innerHTML=`<span>${CATMAP[mo.cat].emo}</span><span>${name}</span><span class="x">✕</span>`;
+     s.onclick=()=>{ const k=sel.indexOf(name); if(k>=0)sel.splice(k,1); save(); renderMoves(); };
+   } else { s.className='slot empty'; s.textContent='＋ 空き枠'; }
+   slots.appendChild(s);
+ }
+ list.appendChild(slots);
+
+ // === カテゴリ別 技リスト ===
+ CATS.forEach(c=>{
+   const grp=document.createElement('div'); grp.className='catgroup';
+   grp.innerHTML=`<div class="catname">${c.emo} ${c.label}</div>`;
+   const mg=document.createElement('div'); mg.className='mvgrid';
+   MOVES.filter(m=>m.cat===c.key).forEach(m=>{
+     const on=sel.includes(m.n);
+     const b=document.createElement('div'); b.className='mv'+(on?' on':'');
+     b.innerHTML=`<div class="mn">${on?'✔ ':''}${m.n}</div><div class="mp">${m.desc} 世界${mrank[m.n][nat.id]}位</div>`;
+     b.onclick=()=>{
+       const i=sel.indexOf(m.n);
+       if(i>=0){ sel.splice(i,1); }              // 選択中はタップで外す
+       else if(sel.length<4){ sel.push(m.n); }   // 空きがあれば追加
+       else { const sb=document.getElementById('slotBar'); sb.classList.remove('shake'); void sb.offsetWidth; sb.classList.add('shake'); return; } // 満杯→スロットを振動
+       save(); renderMoves();
+     };
+     mg.appendChild(b);
+   });
+   grp.appendChild(mg); list.appendChild(grp);
+ });
+}
+document.getElementById('moveBack').onclick=()=>renderTeam()||show('teamScreen');
+document.getElementById('startBattleBtn').onclick=()=>{
+ for(const id of teamPick){ if(SAVE.moves[id].length!==4){alert(BY[id].name+' の技が4つ未満！');return;} }
+ startBattle();
+};
+
+/* ========= BATTLE ========= */
+let pTeam,eTeam,pA,eA,busy,over;
+function mkUnit(id,names){const n=BY[id];const ms=(names||SAVE.moves[id]||autoMoves(n));return {n,moves:ms.map(x=>MV[x]),hp:maxHpOf(n),max:maxHpOf(n)};}
+function startBattle(){
+ const D=curDiff();
+ pTeam=teamPick.map(id=>mkUnit(id));
+ // 敵：難易度に応じたレア帯からランダム3（重複なし）。HPは難易度倍率
+ const pool=NATIONS.filter(n=>!D.rarPool||D.rarPool.includes(n.rar)).map(n=>n.id), eset=[];
+ while(eset.length<3){const id=pool[Math.floor(Math.random()*pool.length)]; if(!eset.includes(id))eset.push(id);}
+ eTeam=eset.map(id=>{const u=mkUnit(id,autoMoves(BY[id])); u.max=Math.round(u.max*D.eHp); u.hp=u.max; return u;});
+ pA=0; eA=0; busy=false; over=false;
+ document.getElementById('log').innerHTML='';
+ show('battleScreen');
+ renderBattle();
+ log(`<span class="sys">⚔ あなたのチーム vs てきチーム！【${D.name}】</span>`);
+ // 先制の予告だけ表示。実際の先攻はターン内で面積が小さい方が先に動く（毎ターン適用）
+ if(active('p').n.area<=active('e').n.area) log(`<span class="good">${active('p').n.name}はすばやい！先に動く</span>`);
+ else log(`<span class="sys">てきの方がすばやい。先に動く！</span>`);
+ turn('▶ コマンドを選べ'); enableCmd(true);
+}
+const active=s=> s==='p'?pTeam[pA]:eTeam[eA];
+const team=s=> s==='p'?pTeam:eTeam;
+const aliveIdx=s=>{const t=team(s);for(let i=0;i<t.length;i++)if(t[i].hp>0)return i;return -1;};
+
+function renderBattle(){
+ const e=active('e'),p=active('p');
+ document.getElementById('eFlag').src=flag(e.n.cc); document.getElementById('eName').textContent=e.n.name;
+ document.getElementById('pFlag').src=flag(p.n.cc); document.getElementById('pName').textContent=p.n.name;
+ paint('eHp','eHpTxt',e); paint('pHp','pHpTxt',p);
+ pips('eTeamPips',eTeam,eA); pips('pTeamPips',pTeam,pA);
+ renderCmd();
+}
+function pips(id,t,act){
+ const el=document.getElementById(id); el.innerHTML='';
+ t.forEach((u,i)=>{const im=document.createElement('img');im.src=flag(u.n.cc);
+   im.className='pip'+(u.hp<=0?' dead':'')+(i===act?' now':''); el.appendChild(im);});
+}
+function paint(bar,txt,u){
+ const pct=Math.max(0,u.hp/u.max*100);
+ const f=document.getElementById(bar); f.style.width=pct+'%';
+ f.className='hpfill'+(pct<25?' low':pct<55?' mid':'');
+ document.getElementById(txt).textContent=`${Math.max(0,u.hp)}/${u.max}`;
+}
+function renderCmd(){
+ const p=active('p'), e=active('e');
+ const m=document.getElementById('moves'); m.innerHTML='';
+ p.moves.forEach(mv=>{
+   const diff=mscore[mv.n][p.n.id]-mscore[mv.n][e.n.id];
+   const cls=diff>=20?'good':diff<=-20?'bad':'mid';
+   const tg=diff>=40?'抜群':diff>=20?'有利':diff<=-40?'微妙':diff<=-20?'不利':'互角';
+   const pow=Math.max(5,Math.round(20+diff*0.4)); // 順位差から決まる予測威力
+   const b=document.createElement('button'); b.className='bmv';
+   b.innerHTML=`<div class="bn">${CATMAP[mv.cat].emo} ${mv.n}<span class="tagb ${cls}">${tg}</span></div>
+     <div class="bp"><b style="color:var(--yel)">威力 ${pow}</b>・${mv.desc} 自国${mrank[mv.n][p.n.id]}位/相手${mrank[mv.n][e.n.id]}位</div>`;
+   b.onclick=()=>{ takeTurn({type:'move',mv}); };
+   m.appendChild(b);
+ });
+ // 交代
+ const sr=document.getElementById('switchRow'); sr.innerHTML='<span class="lbl">交代:</span>';
+ pTeam.forEach((u,i)=>{
+   const b=document.createElement('button'); b.className='swbtn'; b.disabled=(i===pA||u.hp<=0);
+   b.innerHTML=`<img src="${flag(u.n.cc)}">`;
+   b.onclick=()=>takeTurn({type:'switch',idx:i});
+   sr.appendChild(b);
+ });
+}
+function enableCmd(on){
+ document.querySelectorAll('#moves .bmv').forEach(b=>b.disabled=!on);
+ document.querySelectorAll('#switchRow .swbtn').forEach((b,i)=>{
+   if(on){ b.disabled=(i===pA||pTeam[i].hp<=0); } else b.disabled=true;
+ });
+}
+
+/* ターン進行 */
+function takeTurn(pAction){
+ if(busy||over) return; busy=true; enableCmd(false);
+ const eAction=enemyChoose();
+ const order=[{s:'p',a:pAction},{s:'e',a:eAction}].sort((x,y)=>{
+   const px=x.a.type==='switch'?1:0, py=y.a.type==='switch'?1:0;
+   if(px!==py) return py-px;
+   return active(x.s).n.area-active(y.s).n.area;
+ });
+ runSeq(order,0);
+}
+function runSeq(order,i){
+ if(over){return;}
+ if(i>=order.length){ busy=false; enableCmd(true); turn('▶ コマンドを選べ'); renderBattle(); return; }
+ const {s,a}=order[i];
+ if(active(s).hp<=0){ runSeq(order,i+1); return; } // 既に倒れてたら飛ばす
+ doAction(s,a,()=>runSeq(order,i+1));
+}
+function doAction(side,action,done){
+ if(action.type==='switch'){
+   const t=team(side); if(t[action.idx].hp<=0||action.idx===(side==='p'?pA:eA)){done();return;}
+   if(side==='p')pA=action.idx; else eA=action.idx;
+   log(`<span class="sys">${side==='p'?'あなた':'てき'}は ${t[action.idx].n.name} を繰り出した！</span>`);
+   renderBattle(); setTimeout(done,500); return;
+ }
+ // move
+ const at=active(side), df=active(side==='p'?'e':'p'), mv=action.mv;
+ turn(`${at.n.name}の ${mv.n}！`);
+ const atkBox=side==='p'?'playerBox':'enemyBox';
+ lunge(atkBox,side==='p'?'you':'enemy');
+ setTimeout(()=>{
+   const sc=mscore[mv.n][at.n.id]-mscore[mv.n][df.n.id]; // 技ごとのランキング差がそのまま威力
+   const rnd=Math.floor(Math.random()*7)-3;
+   let dmg=Math.round(20+sc*0.4+rnd);
+   if(side==='e') dmg=Math.round(dmg*curDiff().eDmg); // 難易度：敵の与ダメ倍率
+   if(dmg<5)dmg=5;
+   const crit=sc>=40, weak=sc<=-40;
+   df.hp=Math.max(0,df.hp-dmg);
+   const dfBox=side==='p'?'enemyBox':'playerBox';
+   hit(dfBox,dmg,crit); particles(dfBox,mv.cat);
+   let msg=`${at.n.name}の<b>${mv.n}</b>！ `;
+   if(crit)msg+=`<span class="good">効果は抜群だ！</span>`;
+   if(weak)msg+=`効果は今ひとつ…`;
+   log(msg+` <span class="dmg">${df.n.name}に ${dmg} ダメージ</span>`);
+   renderBattle();
+   if(df.hp<=0){
+     log(`<span class="bad">${df.n.name} は たおれた！</span>`);
+     const dfSide=side==='p'?'e':'p';
+     const nxt=aliveIdx(dfSide);
+     if(nxt<0){ over=true; setTimeout(()=>endBattle(side==='p'),700); return; }
+     if(dfSide==='p')pA=nxt; else eA=nxt;
+     log(`<span class="sys">${active(dfSide).n.name} を繰り出した！</span>`);
+     renderBattle(); setTimeout(done,650);
+   } else setTimeout(done,500);
+ },230);
+}
+
+/* 敵AI：現在の相手に一番有効な技。不利すぎたら交代 */
+function enemyChoose(){
+ const e=active('e'), p=active('p');
+ // かんたん：テキトーに技を選ぶ（交代もしない）
+ if(curDiff().ai==='rand') return {type:'move',mv:e.moves[Math.floor(Math.random()*e.moves.length)]};
+ let best=null;
+ e.moves.forEach(mv=>{ const sc=mscore[mv.n][e.n.id]-mscore[mv.n][p.n.id];
+   const val=sc; if(!best||val>best.val) best={mv,val,sc}; });
+ // 全技不利&控えがいるなら30%交代
+ if(best.sc<-25 && Math.random()<0.3){
+   const cand=eTeam.map((u,i)=>({u,i})).filter(x=>x.u.hp>0&&x.i!==eA);
+   if(cand.length){ const pick=cand[Math.floor(Math.random()*cand.length)]; return {type:'switch',idx:pick.i}; }
+ }
+ return {type:'move',mv:best.mv};
+}
+
+/* FX */
+function lunge(boxId,dir){const b=document.getElementById(boxId);b.classList.remove('lunge','you','enemy');void b.offsetWidth;b.classList.add('lunge',dir);}
+function hit(boxId,dmg,crit){
+ const b=document.getElementById(boxId);
+ b.classList.remove('shake','hitflash');void b.offsetWidth;b.classList.add('shake','hitflash');
+ const d=document.createElement('div');d.className='dmgpop'+(crit?' crit':'');d.textContent='-'+dmg;
+ b.appendChild(d);setTimeout(()=>d.remove(),900);
+}
+function particles(boxId,cat){
+ const b=document.getElementById(boxId), emo=CATMAP[cat].emo;
+ for(let i=0;i<9;i++){
+   const p=document.createElement('div');p.className='particle';p.textContent=emo;
+   const ang=Math.random()*Math.PI*2, dist=40+Math.random()*55;
+   p.style.left=(30+Math.random()*40)+'%'; p.style.top=(30+Math.random()*30)+'%';
+   p.style.setProperty('--dx',Math.cos(ang)*dist+'px');
+   p.style.setProperty('--dy',(Math.sin(ang)*dist-30)+'px');
+   p.style.setProperty('--rot',(Math.random()*720-360)+'deg');
+   p.style.animationDelay=(Math.random()*0.12)+'s';
+   b.appendChild(p); setTimeout(()=>p.remove(),1050);
+ }
+}
+const turn=t=>document.getElementById('turnInfo').textContent=t;
+function log(h){const l=document.getElementById('log');const d=document.createElement('div');d.innerHTML=h;l.appendChild(d);l.scrollTop=l.scrollHeight;}
+
+function endBattle(win){
+ const D=curDiff();
+ if(win){SAVE.medals+=D.reward;save();}
+ document.getElementById('resEm').textContent=win?'🏆':'💀';
+ const t=document.getElementById('resTtl'); t.textContent=win?'WIN!':'LOSE...'; t.className=win?'win':'lose';
+ document.getElementById('resTxt').innerHTML=win
+   ?`勝利！【${D.name}】 メダル +${D.reward} を手に入れた！`
+   :`敗北…【${D.name}】 編成を見直してリベンジだ`;
+ show('resultScreen');
+}
+document.getElementById('resBack').onclick=()=>renderHome();
+
+/* ===== INIT ===== */
+load();
+renderHome();
+</script>
+</body>
+</html>
