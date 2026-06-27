@@ -426,10 +426,10 @@ const MOVES=[
  {n:'CO2削減波',cat:'env',desc:'脱炭素',w:{env:0.8,soc:0.2}},
  {n:'水の恵み',cat:'env',desc:'水資源',w:{env:0.5,area:0.5}},
 
- {n:'サッカー魂',cat:'sports',desc:'サッカー',w:{sports:0.6,pop:0.4}},
- {n:'野球の一撃',cat:'sports',desc:'野球',w:{sports:0.6,gdppc:0.4}},
- {n:'五輪ラッシュ',cat:'sports',desc:'五輪総合',w:{sports:1}},
- {n:'バスケダンク',cat:'sports',desc:'バスケ',w:{sports:0.7,gdp:0.3}},
+ {n:'サッカー魂',cat:'sports',desc:'サッカー実力',w:{socc:1}},
+ {n:'野球の一撃',cat:'sports',desc:'野球実力',w:{base:1}},
+ {n:'五輪ラッシュ',cat:'sports',desc:'五輪メダル力',w:{sports:1}},
+ {n:'バスケダンク',cat:'sports',desc:'バスケ実力',w:{bask:1}},
 ];
 const MV={}; MOVES.forEach(m=>MV[m.n]=m);
 
@@ -442,10 +442,24 @@ CATS.forEach(c=>{
  s.forEach((n,i)=>{ranks[c.key][n.id]=i+1; score[c.key][n.id]=Math.round((N-1-i)/(N-1)*100);});
 });
 
+/* 競技別の実力データ（0..100：FIFA順位/W杯実績・WBC/MLB・FIBA/NBA を参考にした概算） */
+const SP={
+ jp:{socc:72,base:96,bask:58}, us:{socc:60,base:95,bask:99}, cn:{socc:42,base:40,bask:62},
+ de:{socc:90,base:35,bask:88}, in:{socc:25,base:15,bask:30}, br:{socc:97,base:42,bask:72},
+ gb:{socc:88,base:35,bask:52}, fr:{socc:96,base:32,bask:90}, ru:{socc:55,base:28,bask:68},
+ kr:{socc:70,base:86,bask:52}, ca:{socc:52,base:64,bask:82}, au:{socc:58,base:56,bask:84},
+ it:{socc:86,base:58,bask:70}, es:{socc:93,base:46,bask:92}, mx:{socc:74,base:80,bask:50},
+ id:{socc:35,base:22,bask:34}, tr:{socc:64,base:20,bask:72}, sa:{socc:58,base:10,bask:28},
+ nl:{socc:89,base:70,bask:54}, ch:{socc:70,base:24,bask:44}, se:{socc:68,base:30,bask:50},
+ ar:{socc:98,base:36,bask:80}, za:{socc:46,base:26,bask:36}, eg:{socc:60,base:10,bask:44},
+ ng:{socc:66,base:12,bask:58}, th:{socc:36,base:26,bask:32}, vn:{socc:38,base:20,bask:26},
+ nz:{socc:40,base:30,bask:58},
+};
 /* 基礎ステータスを0..1に正規化（派生指標も含む） */
 const STATSRC={gdp:n=>n.gdp,trade:n=>n.trade,fin:n=>n.finance,pop:n=>n.pop,
   soc:n=>n.society,env:n=>n.env,sports:n=>n.sports,area:n=>n.area,
-  gdppc:n=>n.gdp/n.pop,tradepc:n=>n.trade/n.pop};
+  gdppc:n=>n.gdp/n.pop,tradepc:n=>n.trade/n.pop,
+  socc:n=>SP[n.id].socc, base:n=>SP[n.id].base, bask:n=>SP[n.id].bask};
 const NORM={};
 for(const k in STATSRC){
  const vals=NATIONS.map(STATSRC[k]); const mn=Math.min(...vals),mx=Math.max(...vals);
@@ -462,6 +476,14 @@ MOVES.forEach(m=>{
  mrank[m.n]={}; mscore[m.n]={};
  s.forEach((n,i)=>{mrank[m.n][n.id]=i+1; mscore[m.n][n.id]=Math.round((N-1-i)/(N-1)*100);});
 });
+
+/* レア度を総合力から自動算出：全技スコアの平均で国力を出し、順位でtier分け
+   ★5=上位2 / ★4=次5 / ★3=次8 / ★2=次7 / ★1=残り（n.rarを上書き） */
+const strength={};
+NATIONS.forEach(n=>{ let s=0; MOVES.forEach(m=>s+=mscore[m.n][n.id]); strength[n.id]=Math.round(s/MOVES.length); });
+[...NATIONS].sort((a,b)=>strength[b.id]-strength[a.id])
+  .forEach((n,i)=>{ n.rar = i<2?5 : i<7?4 : i<15?3 : i<22?2 : 1; });
+
 const sq=NATIONS.map(n=>Math.sqrt(n.pop)), minSq=Math.min(...sq), maxSq=Math.max(...sq);
 const maxHpOf=n=>Math.round(80+(Math.sqrt(n.pop)-minSq)/(maxSq-minSq)*120);
 const starStr=r=>'★'.repeat(r)+'☆'.repeat(5-r);
